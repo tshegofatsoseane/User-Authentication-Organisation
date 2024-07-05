@@ -1,18 +1,22 @@
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Organisation
 from .serializers import UserSerializer, OrganisationSerializer
 
 class RegisterView(APIView):
+    permission_classes = [AllowAny]  # Moved out of the method
+
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             org_name = f"{user.first_name}'s Organisation"
-            Organisation.objects.create(name=org_name).users.add(user)
+            org = Organisation.objects.create(name=org_name)
+            org.users.add(user)
+            org.save()
             refresh = RefreshToken.for_user(user)
             return Response({
                 'status': 'success',
@@ -27,6 +31,8 @@ class RegisterView(APIView):
         }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
