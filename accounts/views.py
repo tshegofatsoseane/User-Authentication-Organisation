@@ -5,9 +5,10 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Organisation
 from .serializers import UserSerializer, OrganisationSerializer
+from rest_framework.exceptions import ValidationError
 
 class RegisterView(APIView):
-    permission_classes = [AllowAny]  # Moved out of the method
+    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = UserSerializer(data=request.data)
@@ -23,12 +24,23 @@ class RegisterView(APIView):
                 'message': 'Registration successful',
                 'data': {
                     'accessToken': str(refresh.access_token),
-                    'user': serializer.data
+                    'user': {
+                        'userId': str(user.user_id),
+                        'firstName': user.first_name,
+                        'lastName': user.last_name,
+                        'email': user.email,
+                        'phone': user.phone
+                    }
                 }
             }, status=status.HTTP_201_CREATED)
+        
+        errors = [{"field": key, "message": value[0]} for key, value in serializer.errors.items()]
         return Response({
-            'errors': serializer.errors
-        }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            'status': 'Bad request',
+            'message': 'Registration unsuccessful',
+            'statusCode': 400,
+            'errors': errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -57,10 +69,39 @@ class UserDetailView(generics.RetrieveAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = 'user_id'
 
-    def get_queryset(self):
-        user = self.request.user
-        return User.objects.filter(pk=user.pk)
+    def get(self, request, *args, **kwargs):
+        user_id = kwargs['user_id']
+        user = User.objects.filter(user_id=user_id).first()
+        
+        if not user:
+            return Response({
+                "status": "error",
+                "message": "No User matches the given query."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if user == request.user or request.user.organisations.filter(users=user).exists():
+            serializer = self.get_serializer(user)
+            user_data = {
+                "userId": str(user.user_id),
+                "firstName": user.first_name,
+                "lastName": user.last_name,
+                "email": user.email,
+                "phone": user.phone
+            }
+            return Response({
+                "status": "success",
+                "message": "User retrieved successfully",
+                "data": user_data
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "status": "error",
+            "message": "You do not have permission to access this user's data."
+        }, status=status.HTTP_403_FORBIDDEN)
+
+
 
 class OrganisationListView(generics.ListAPIView):
     serializer_class = OrganisationSerializer
