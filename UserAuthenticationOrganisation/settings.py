@@ -78,14 +78,15 @@ WSGI_APPLICATION = "UserAuthenticationOrganisation.wsgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'your_database_name',
-        'USER': 'your_database_user',
-        'PASSWORD': 'your_database_password',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'user_auth_organisation_db',
+        'USER': 'user_auth_organisation_user',
+        'PASSWORD': '98Naturena!!',
         'HOST': 'localhost',
-        'PORT': '',
+        'PORT': '5432',
     }
 }
+
 
 
 # Password validation
