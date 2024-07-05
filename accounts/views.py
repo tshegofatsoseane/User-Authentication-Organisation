@@ -51,12 +51,19 @@ class LoginView(APIView):
         user = User.objects.filter(email=email).first()
         if user and user.check_password(password):
             refresh = RefreshToken.for_user(user)
+            user_data = {
+                'userId': str(user.user_id),
+                'firstName': user.first_name,
+                'lastName': user.last_name,
+                'email': user.email,
+                'phone': user.phone
+            }
             return Response({
                 'status': 'success',
                 'message': 'Login successful',
                 'data': {
                     'accessToken': str(refresh.access_token),
-                    'user': UserSerializer(user).data
+                    'user': user_data
                 }
             }, status=status.HTTP_200_OK)
         return Response({
@@ -100,8 +107,7 @@ class UserDetailView(generics.RetrieveAPIView):
             "status": "error",
             "message": "You do not have permission to access this user's data."
         }, status=status.HTTP_403_FORBIDDEN)
-
-
+    
 
 class OrganisationListView(generics.ListAPIView):
     serializer_class = OrganisationSerializer
@@ -110,6 +116,17 @@ class OrganisationListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         return user.organisations.all()
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'status': 'success',
+            'message': 'Organisations retrieved successfully',
+            'data': {
+                'organisations': serializer.data
+            }
+        }, status=status.HTTP_200_OK)
 
 class OrganisationDetailView(generics.RetrieveAPIView):
     queryset = Organisation.objects.all()

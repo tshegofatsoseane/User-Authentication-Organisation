@@ -18,6 +18,8 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 class OrganisationSerializer(serializers.ModelSerializer):
+    orgId = serializers.UUIDField(source='org_id', read_only=True)
+
     class Meta:
         model = Organisation
-        fields = ['org_id', 'name', 'description']
+        fields = ['orgId', 'name', 'description']
